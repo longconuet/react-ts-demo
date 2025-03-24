@@ -7,7 +7,8 @@ import { useAuthStore } from '../stores/authStore'
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { setUser } = useAuthStore()
+  const [error, setError] = useState<string | null>(null)
+  const { setUser, logout } = useAuthStore()
   const navigate = useNavigate()
 
   const loginMutation = useMutation({
@@ -16,13 +17,17 @@ function Login() {
       setUser(data)
       navigate('/departments')
     },
-    onError: (error) => {
-      console.error('Login failed:', error)
+    onError: (error: Error) => {
+      setError(error.message)
+      if (error.message.includes('Unauthorized')) {
+        logout()
+      }
     },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     loginMutation.mutate({ email, password })
   }
 
@@ -30,6 +35,7 @@ function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
+        {error && <p className="text-red-500 mb-4">{error}</p>}
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-gray-700">Email</label>

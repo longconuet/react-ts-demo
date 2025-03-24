@@ -8,3 +8,15 @@ export interface User {
     id: string
     name: string
   }
+  
+  export interface Employee {
+    id: string
+    name: string
+    departmentId: string
+    positionId: string
+  }
+  
+  export interface Position {
+    id: string
+    name: string
+  }
