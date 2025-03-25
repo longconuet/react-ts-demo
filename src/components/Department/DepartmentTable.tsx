@@ -4,7 +4,6 @@ import { Department } from '../../types'
 interface DepartmentTableProps {
   departments: Department[]
   isLoading: boolean
-  error: string | null
   pagination: {
     current: number
     pageSize: number
@@ -18,13 +17,20 @@ interface DepartmentTableProps {
 function DepartmentTable({
   departments,
   isLoading,
-  error,
   pagination,
   onEdit,
   onDelete,
   onPageChange,
 }: DepartmentTableProps) {
   const columns = [
+    {
+      title: 'No',
+      key: 'no',
+      render: (_: any, __: Department, index: number) => {
+        // Tính STT: (trang hiện tại - 1) * số bản ghi mỗi trang + chỉ số + 1
+        return (pagination.current - 1) * pagination.pageSize + index + 1
+      },
+    },
     {
       title: 'Name',
       dataIndex: 'name',
@@ -58,7 +64,6 @@ function DepartmentTable({
 
   return (
     <>
-      {error && <Alert message={error} type="error" showIcon className="mb-4" />}
       <Table
         columns={columns}
         dataSource={departments}

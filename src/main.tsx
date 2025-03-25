@@ -7,6 +7,7 @@ import 'antd/dist/reset.css'
 import '@ant-design/v5-patch-for-react-19';
 import App from './App.tsx'
 import { useAuthStore } from './stores/authStore'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 const queryClient = new QueryClient()
 
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <App />
       </BrowserRouter>
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </StrictMode>,
 )

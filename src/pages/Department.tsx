@@ -1,51 +1,59 @@
-import { useState } from 'react'
-import { useQuery, useMutation, UseQueryResult } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/authStore'
 import { fetchDepartments, createDepartment, updateDepartment, deleteDepartment } from '../api'
-import type { Department, PaginatedResponse } from '../types'
+import type { Department } from '../types'
 import Layout from '../layout/Layout'
 import DepartmentTable from '../components/Department/DepartmentTable'
 import DepartmentFormModal from '../components/Department/DepartmentFormModal'
-import { Button, message } from 'antd'
+import { Button, message, Modal, Spin } from 'antd'
+
+const { confirm } = Modal
 
 function Department() {
   const { logout } = useAuthStore()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
-  const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const { data: response, refetch, isLoading }: UseQueryResult<PaginatedResponse<Department>, Error> = useQuery({
+  const { data: response, refetch, isLoading, isError, error }  = useQuery({
     queryKey: ['departments', pageNumber],
-    queryFn: () => fetchDepartments({ pageNumber: pageNumber, pageSize: 10 }),
-    onError: (error: Error) => {
-      setError(error.message)
-      message.error(error.message)
-    },
+    queryFn: async () => {
+      return await fetchDepartments({ pageNumber, pageSize: 3 })
+    }
   })
+
+  useEffect(() => {
+    if (isError && error) {
+      message.error(error instanceof Error ? error.message : 'Failed to fetch departments')
+    }
+  }, [isError, error])
 
   const departments = response?.data || []
   const pagination = {
     current: response?.pageNumber || 1,
-    pageSize: response?.pageSize || 10,
+    pageSize: response?.pageSize || 3,
     total: response?.totalCount || 0,
   }
 
   const createMutation = useMutation({
-    mutationFn: createDepartment,
+    mutationFn: async (data: Omit<Department, 'id'>) => {
+      await createDepartment(data)
+    },
     onSuccess: () => {
       refetch()
       setIsModalOpen(false)
       message.success('Department created successfully!')
     },
     onError: (error: Error) => {
-      setError(error.message)
       message.error(error.message)
     },
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name: string } }) => updateDepartment(id, data),
+    mutationFn: async (data: Omit<Department, 'code'>) => {
+      await updateDepartment(data)
+    },
     onSuccess: () => {
       refetch()
       setEditingId(null)
@@ -53,29 +61,29 @@ function Department() {
       message.success('Department updated successfully!')
     },
     onError: (error: Error) => {
-      setError(error.message)
       message.error(error.message)
     },
   })
 
   const deleteMutation = useMutation({
-    mutationFn: deleteDepartment,
+    mutationFn: async (id: string) => {
+      await deleteDepartment(id)
+    },
     onSuccess: () => {
       refetch()
       message.success('Department deleted successfully!')
     },
     onError: (error: Error) => {
-      setError(error.message)
       message.error(error.message)
     },
   })
 
-  const handleAddOrEdit = (values: { name: string }) => {
-    setError(null)
+  const handleAddOrEdit = (values: Department) => {
     if (editingId) {
-      updateMutation.mutate({ id: editingId, data: values })
+      updateMutation.mutate({ ...values, id: editingId })
     } else {
-      createMutation.mutate(values)
+      const { id, ...data } = values
+      createMutation.mutate(data)
     }
   }
 
@@ -85,41 +93,59 @@ function Department() {
   }
 
   const handleDelete = (id: string) => {
-    deleteMutation.mutate(id)
+    confirm({
+      title: 'Delete Department',
+      content: 'Are you sure you want to delete this department?',
+      okText: 'Yes, delete it',
+      okType: 'danger',
+      cancelText: 'No',
+      onOk() {
+        deleteMutation.mutate(id)
+      },
+      onCancel() { },
+    })
   }
 
   return (
     <Layout title="Departments" onLogout={logout}>
-      <div className="mb-6">
-        <Button
-          type="primary"
-          onClick={() => {
-            setEditingId(null)
-            setIsModalOpen(true)
-          }}
-        >
-          Add Department
-        </Button>
-      </div>
+      {isLoading ? (
+        <Spin size="large" tip="Loading departments...">
+          <div className="text-center mt-10 min-h-[200px]" />
+        </Spin>
+      ) : (
+        <>
+          <div className="mb-6">
+            <Button
+              type="primary"
+              onClick={() => {
+                setEditingId(null)
+                setIsModalOpen(true)
+              }}
+              disabled={isLoading}
+            >
+              Add Department
+            </Button>
+          </div>
 
-      <DepartmentTable
-        departments={departments}
-        isLoading={isLoading}
-        error={error}
-        pagination={pagination}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onPageChange={setPageNumber}
-      />
+          <DepartmentTable
+            departments={departments}
+            isLoading={isLoading}
+            pagination={pagination}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onPageChange={setPageNumber}
+          />
 
-      <DepartmentFormModal
-        visible={isModalOpen}
-        editingId={editingId}
-        initialValues={editingId ? departments.find((d) => d.id === editingId) : undefined}
-        onSubmit={handleAddOrEdit}
-        onCancel={() => setIsModalOpen(false)}
-        loading={createMutation.isPending || updateMutation.isPending}
-      />
+          <DepartmentFormModal
+            visible={isModalOpen}
+            editingId={editingId}
+            initialValues={editingId ? departments.find((d) => d.id === editingId) : undefined}
+            onSubmit={handleAddOrEdit}
+            onCancel={() => setIsModalOpen(false)}
+            loading={createMutation.isPending || updateMutation.isPending}
+          />
+        </>
+      )}
     </Layout>
   )
 }
