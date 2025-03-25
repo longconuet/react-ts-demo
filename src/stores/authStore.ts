@@ -6,6 +6,7 @@ interface AuthState {
   isAuthenticated: boolean
   setUser: (user: User) => void
   logout: () => void
+  initializeAuth: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -19,4 +20,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('token')
     set({ user: null, isAuthenticated: false })
   },
+  initializeAuth: () => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      set({ isAuthenticated: true }) // Khôi phục isAuthenticated nếu có token
+      // Nếu backend cung cấp API để lấy thông tin user từ token, có thể gọi API ở đây
+    }
+  },
 }))
+
+// Gọi initializeAuth ngay khi store được tạo
+useAuthStore.getState().initializeAuth()

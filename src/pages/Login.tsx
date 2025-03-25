@@ -1,70 +1,78 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { loginUser } from '../api'
 import { useAuthStore } from '../stores/authStore'
+import { Form, Input, Button, Typography, message } from 'antd'
+
+const { Title } = Typography
 
 function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const { setUser, logout } = useAuthStore()
+  const { setUser, isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
 
   const loginMutation = useMutation({
     mutationFn: loginUser,
     onSuccess: (data) => {
       setUser(data)
-      navigate('/departments')
+      navigate('/dashboard')
     },
     onError: (error: Error) => {
       setError(error.message)
-      if (error.message.includes('Unauthorized')) {
-        logout()
-      }
+      message.success('Logged in successfully!')
+      message.error(error.message)
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const onFinish = (values: { username: string; password: string }) => {
     setError(null)
-    loginMutation.mutate({ email, password })
+    loginMutation.mutate(values)
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded"
-              required
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loginMutation.isPending}
-            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
+      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
+        <Title level={2} className="text-center mb-6">Login</Title>
+        <Form
+          name="login"
+          onFinish={onFinish}
+          layout="vertical"
+          className="space-y-4"
+        >
+          <Form.Item
+            label="Username"
+            name="username"
+            rules={[{ required: true, message: 'Please input your username!' }]}
           >
-            {loginMutation.isPending ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+            <Input placeholder="Enter your username" className="w-full" />
+          </Form.Item>
+
+          <Form.Item
+            label="Password"
+            name="password"
+            rules={[{ required: true, message: 'Please input your password!' }]}
+          >
+            <Input.Password placeholder="Enter your password" className="w-full" />
+          </Form.Item>
+
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loginMutation.isPending}
+              className="w-full"
+            >
+              {loginMutation.isPending ? 'Logging in...' : 'Login'}
+            </Button>
+          </Form.Item>
+        </Form>
       </div>
     </div>
   )

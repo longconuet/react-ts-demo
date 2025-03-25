@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios'
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5000/api', // Thay bằng URL backend của bạn
+  baseURL: 'https://localhost:7244/api', // Thay bằng URL backend của bạn
   headers: {
     'Content-Type': 'application/json',
   },
