@@ -27,7 +27,6 @@ function DepartmentTable({
       title: 'No',
       key: 'no',
       render: (_: any, __: Department, index: number) => {
-        // Tính STT: (trang hiện tại - 1) * số bản ghi mỗi trang + chỉ số + 1
         return (pagination.current - 1) * pagination.pageSize + index + 1
       },
     },

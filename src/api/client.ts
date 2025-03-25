@@ -15,16 +15,43 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
+interface ValidationError {
+  propertyName: string
+  errorMessage: string
+  attemptedValue: string
+  customState: null | any
+  severity: number
+  errorCode: string
+  formattedMessagePlaceholderValues: Record<string, string>
+}
+
+interface ApiErrorResponse {
+  title: string
+  status: number
+  detail: string
+  instance: string
+  traceId: string
+  ValidationErrors: ValidationError[]
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     const status = error.response?.status
+    const customMessage = error.response?.data as { message?: string }
     let message = 'An unexpected error occurred'
 
     if (status) {
       switch (status) {
         case 400:
-          message = 'Bad request: Please check your input'
+          const apiError = error.response?.data as ApiErrorResponse
+          if (apiError.ValidationErrors?.length > 0) {
+            message = apiError.ValidationErrors.map(
+              (err) => `${err.errorMessage}`
+            ).join('. ')
+          } else {
+            message = 'Bad Request: Invalid input data'
+          }
           break
         case 401:
           message = 'Unauthorized: Please log in again'
@@ -33,10 +60,10 @@ apiClient.interceptors.response.use(
           message = 'Forbidden: You do not have permission'
           break
         case 404:
-          message = 'Not found: Resource does not exist'
+          message = customMessage.message || 'Not found: Resource does not exist'
           break
         case 500:
-          message = 'Server error: Please try again later'
+          message = customMessage.message || 'Server error: Please try again later'
           break
         default:
           message = `Error ${status}: Something went wrong`
@@ -45,9 +72,12 @@ apiClient.interceptors.response.use(
       message = 'Network error: Please check your connection'
     }
 
-    const errorData = error.response?.data as { message?: string }
-    const customMessage = errorData?.message || message
-    return Promise.reject(new Error(customMessage))
+    if (status && status == 401) {
+      localStorage.removeItem('token')
+      window.location.href = '/login'
+    }
+
+    return Promise.reject(new Error(message))
   }
 )
 

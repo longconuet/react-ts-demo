@@ -3,6 +3,7 @@ import Login from './pages/Login'
 import Department from './pages/Department'
 import PrivateRoute from './routes/PrivateRoute'
 import Dashboard from './pages/Dashboard'
+import NotFound from './pages/NotFound'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/departments" element={<Department />} />
         </Route>
         <Route path="/" element={<Login />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
   )
